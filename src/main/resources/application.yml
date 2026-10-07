@@ -7,6 +7,10 @@ spring:
     url: jdbc:postgresql://localhost:5432/delivery
     username: delivery
 
+  jackson:
+    deserialization:
+      accept-float-as-int: false
+
   # JPA
   jpa:
     hibernate:
