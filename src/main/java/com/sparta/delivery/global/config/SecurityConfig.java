@@ -62,6 +62,10 @@ public class SecurityConfig {
                     "/api/menus",
                     "/api/menus/{menuId}"
                 ).permitAll()
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/api/menus/{menuId}"
+                ).hasRole("OWNER")
                 .anyRequest().authenticated()
             );
 

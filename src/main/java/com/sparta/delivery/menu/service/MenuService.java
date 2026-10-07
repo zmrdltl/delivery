@@ -1,5 +1,6 @@
 package com.sparta.delivery.menu.service;
 
+import com.sparta.delivery.menu.dto.request.UpdateMenuRequest;
 import com.sparta.delivery.menu.entity.Menu;
 import com.sparta.delivery.menu.dto.request.CreateMenuRequest;
 import com.sparta.delivery.menu.dto.response.MenuResponse;
@@ -62,6 +63,34 @@ public class MenuService {
                 HttpStatus.NOT_FOUND,
                 "메뉴를 찾을 수 없습니다."
             ));
+
+        return new MenuResponse(menu);
+    }
+
+    @Transactional
+    public MenuResponse update(
+        Long ownerId,
+        Long menuId,
+        UpdateMenuRequest request
+    ) {
+        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "메뉴를 찾을 수 없습니다."
+            ));
+
+        if (!menu.getStore().getOwner().getId().equals(ownerId)) {
+            throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "본인 가게의 메뉴만 수정할 수 있습니다."
+            );
+        }
+
+        menu.update(
+            request.getName(),
+            request.getPrice(),
+            request.getDescription()
+        );
 
         return new MenuResponse(menu);
     }

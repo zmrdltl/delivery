@@ -1,6 +1,7 @@
 package com.sparta.delivery.menu.controller;
 
 import com.sparta.delivery.menu.dto.request.CreateMenuRequest;
+import com.sparta.delivery.menu.dto.request.UpdateMenuRequest;
 import com.sparta.delivery.menu.dto.response.MenuResponse;
 import com.sparta.delivery.menu.repository.MenuRepository;
 import com.sparta.delivery.menu.service.MenuService;
@@ -41,5 +42,18 @@ public class MenuController {
             @PathVariable Long menuId
     ) {
         return ResponseEntity.ok(menuService.findOne(menuId));
+    }
+
+    @PutMapping("/{menuId}")
+    public ResponseEntity<MenuResponse> update(
+        @AuthenticationPrincipal Long ownerId,
+        @PathVariable Long menuId,
+        @Valid @RequestBody UpdateMenuRequest request
+    ) {
+        MenuResponse response = menuService.update(
+            ownerId, menuId, request
+        );
+
+        return ResponseEntity.ok(response);
     }
 }
