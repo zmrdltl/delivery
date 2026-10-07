@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class MenuService {
@@ -43,5 +45,24 @@ public class MenuService {
 
         Menu savedMenu = menuRepository.save(menu);
         return new MenuResponse(savedMenu);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MenuResponse> findAll() {
+        return menuRepository.findAllByDeletedFalse()
+            .stream()
+            .map(MenuResponse::new)
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public MenuResponse findOne(Long menuId) {
+        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "메뉴를 찾을 수 없습니다."
+            ));
+
+        return new MenuResponse(menu);
     }
 }
