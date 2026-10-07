@@ -1,6 +1,6 @@
 package com.sparta.delivery.menu.service;
 
-import com.sparta.delivery.menu.Menu;
+import com.sparta.delivery.menu.entity.Menu;
 import com.sparta.delivery.menu.dto.request.CreateMenuRequest;
 import com.sparta.delivery.menu.dto.response.MenuResponse;
 import com.sparta.delivery.menu.repository.MenuRepository;

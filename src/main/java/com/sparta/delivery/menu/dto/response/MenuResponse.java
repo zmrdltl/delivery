@@ -1,6 +1,6 @@
 package com.sparta.delivery.menu.dto.response;
 
-import com.sparta.delivery.menu.Menu;
+import com.sparta.delivery.menu.entity.Menu;
 import lombok.Getter;
 
 @Getter

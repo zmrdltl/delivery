@@ -1,4 +1,4 @@
-package com.sparta.delivery.menu;
+package com.sparta.delivery.menu.entity;
 
 import com.sparta.delivery.global.entity.BaseEntity;
 import com.sparta.delivery.store.entity.Store;
