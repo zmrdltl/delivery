@@ -61,4 +61,12 @@ public class Order extends BaseEntity {
     public void markPaid() {
         this.status = Status.PAID;
     }
+
+    public void markAccepted() {
+        this.status = Status.ACCEPTED;
+    }
+
+    public void markDelivered() {
+        this.status = Status.DELIVERED;
+    }
 }

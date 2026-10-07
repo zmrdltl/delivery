@@ -154,4 +154,62 @@ public class OrderService {
             ))
             .toList();
     }
+
+    @Transactional
+    public OrderResponse accept(Long ownerId, Long orderId) {
+        Order order = findOwnedOrderWithLock(ownerId, orderId);
+
+        if (order.getStatus() != Order.Status.PAID) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "결제 완료된 주문만 수락할 수 있습니다."
+            );
+        }
+
+        order.markAccepted();
+
+        return new OrderResponse(
+            order,
+            orderItemRepository.findAllByOrderId(orderId)
+        );
+    }
+
+    @Transactional
+    public OrderResponse deliver(Long ownerId, Long orderId) {
+        Order order = findOwnedOrderWithLock(ownerId, orderId);
+
+        if (order.getStatus() != Order.Status.ACCEPTED) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "수락한 주문만 배달 완료할 수 있습니다."
+            );
+        }
+
+        order.markDelivered();
+
+        return new OrderResponse(
+            order,
+            orderItemRepository.findAllByOrderId(orderId)
+        );
+    }
+
+    private Order findOwnedOrderWithLock(
+        Long ownerId,
+        Long orderId
+    ) {
+        Order order = orderRepository.findWithLockById(orderId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "주문을 찾을 수 없습니다."
+            ));
+
+        if (!order.getStore().getOwner().getId().equals(ownerId)) {
+            throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "본인 가게의 주문만 처리할 수 있습니다."
+            );
+        }
+
+        return order;
+    }
 }

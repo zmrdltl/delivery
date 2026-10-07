@@ -71,6 +71,11 @@ public class SecurityConfig {
                     "/api/menus/{menuId}"
                 ).hasRole("OWNER")
                 .requestMatchers(
+                    HttpMethod.PATCH,
+                    "/api/orders/{orderId}/accept",
+                    "/api/orders/{orderId}/deliver"
+                ).hasRole("OWNER")
+                .requestMatchers(
                     HttpMethod.POST,
                     "/api/orders"
                 ).hasRole("CUSTOMER")

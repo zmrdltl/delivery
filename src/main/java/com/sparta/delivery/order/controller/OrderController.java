@@ -39,4 +39,24 @@ public class OrderController {
     ) {
         return ResponseEntity.ok(orderService.findAll(userId));
     }
+
+    @PatchMapping("/{orderId}/accept")
+    public ResponseEntity<OrderResponse> accept(
+        @AuthenticationPrincipal Long ownerId,
+        @PathVariable Long orderId
+    ) {
+        return ResponseEntity.ok(
+            orderService.accept(ownerId, orderId)
+        );
+    }
+
+    @PatchMapping("/{orderId}/deliver")
+    public ResponseEntity<OrderResponse> deliver(
+        @AuthenticationPrincipal Long ownerId,
+        @PathVariable Long orderId
+    ) {
+        return ResponseEntity.ok(
+            orderService.deliver(ownerId, orderId)
+        );
+    }
 }
