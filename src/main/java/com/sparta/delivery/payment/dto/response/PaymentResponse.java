@@ -12,6 +12,7 @@ public class PaymentResponse {
     private final Long orderId;
     private final long amount;
     private final Payment.Method method;
+    private final Payment.Status status;
     private final LocalDateTime createdAt;
 
     public PaymentResponse(Payment payment) {
@@ -19,6 +20,7 @@ public class PaymentResponse {
         this.orderId = payment.getOrder().getId();
         this.amount = payment.getAmount();
         this.method = payment.getMethod();
+        this.status = payment.getStatus();
         this.createdAt = payment.getCreatedAt();
     }
 }

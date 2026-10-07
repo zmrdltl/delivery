@@ -9,6 +9,8 @@ import com.sparta.delivery.order.entity.Order;
 import com.sparta.delivery.order.entity.OrderItem;
 import com.sparta.delivery.order.repository.OrderItemRepository;
 import com.sparta.delivery.order.repository.OrderRepository;
+import com.sparta.delivery.payment.entity.Payment;
+import com.sparta.delivery.payment.repository.PaymentRepository;
 import com.sparta.delivery.store.entity.Store;
 import com.sparta.delivery.store.repository.StoreRepository;
 import com.sparta.delivery.user.entity.User;
@@ -19,6 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +37,8 @@ public class OrderService {
     private final UserRepository userRepository;
     private final StoreRepository storeRepository;
     private final MenuRepository menuRepository;
+    private final PaymentRepository paymentRepository;
+    private final Clock clock;
 
     @Transactional
     public OrderResponse create(
@@ -228,19 +234,67 @@ public class OrderService {
             );
         }
 
-        if (order.getStatus() != Order.Status.ORDERED) {
+        validateCancelableStatus(order);
+
+        if (LocalDateTime.now(clock).isAfter(order.getCreatedAt().plusMinutes(5))) {
             throw new ResponseStatusException(
                 HttpStatus.CONFLICT,
-                "주문 요청 상태에서만 취소할 수 있습니다."
+                "주문 생성 후 5분 이내에만 취소할 수 있습니다."
             );
         }
 
+        cancelPaymentIfPaid(order);
         order.markCanceled();
 
         return new OrderResponse(
             order,
             orderItemRepository.findAllByOrderId(orderId)
         );
+    }
+
+    @Transactional
+    public OrderResponse reject(Long ownerId, Long orderId) {
+        Order order = findOwnedOrderWithLock(ownerId, orderId);
+        validateCancelableStatus(order);
+
+        cancelPaymentIfPaid(order);
+        order.markRejected();
+
+        return new OrderResponse(
+            order,
+            orderItemRepository.findAllByOrderId(orderId)
+        );
+    }
+
+    private void validateCancelableStatus(Order order) {
+        if (order.getStatus() != Order.Status.ORDERED
+            && order.getStatus() != Order.Status.PAID) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "수락 전 주문만 취소하거나 거절할 수 있습니다."
+            );
+        }
+    }
+
+    private void cancelPaymentIfPaid(Order order) {
+        if (order.getStatus() != Order.Status.PAID) {
+            return;
+        }
+
+        Payment payment = paymentRepository.findByOrderId(order.getId())
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "결제 기록을 확인할 수 없습니다."
+            ));
+
+        if (payment.getStatus() != Payment.Status.PAID) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "결제 완료 상태가 아닙니다."
+            );
+        }
+
+        payment.markCanceled();
     }
 
     @Transactional(readOnly = true)

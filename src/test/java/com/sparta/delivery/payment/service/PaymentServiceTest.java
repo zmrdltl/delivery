@@ -56,6 +56,7 @@ class PaymentServiceTest {
         assertEquals(7000, response.getAmount());
         assertEquals(30L, response.getOrderId());
         assertEquals(Payment.Method.CARD, response.getMethod());
+        assertEquals(Payment.Status.PAID, response.getStatus());
         assertEquals(Order.Status.PAID, order.getStatus());
     }
 
@@ -135,6 +136,36 @@ class PaymentServiceTest {
         assertEquals(1, response.size());
         assertEquals(30L, response.getFirst().getOrderId());
         assertEquals(7000, response.getFirst().getAmount());
+    }
+
+    @Test
+    void canceledPaymentsRemainInHistoryWithTheirOriginalAmount() {
+        Payment canceled = payment(40L, order);
+        canceled.markCanceled();
+        order.markCanceled();
+        when(paymentRepository.findAllByOrderCustomerIdOrderByCreatedAtDesc(2L))
+            .thenReturn(List.of(canceled));
+
+        PaymentResponse response = paymentService.findAll(2L).getFirst();
+
+        assertEquals(40L, response.getId());
+        assertEquals(30L, response.getOrderId());
+        assertEquals(7000, response.getAmount());
+        assertEquals(Payment.Status.CANCELED, response.getStatus());
+    }
+
+    @Test
+    void canceledPaymentCannotBePaidAgain() {
+        order.markCanceled();
+        when(orderRepository.findWithLockById(30L)).thenReturn(Optional.of(order));
+        when(paymentRepository.existsByOrderId(30L)).thenReturn(true);
+
+        assertStatus(HttpStatus.CONFLICT, () ->
+            paymentService.create(2L, 30L, cardRequest())
+        );
+
+        assertEquals(Order.Status.CANCELED, order.getStatus());
+        verify(paymentRepository, never()).save(any(Payment.class));
     }
 
     @Test

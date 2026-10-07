@@ -73,7 +73,8 @@ public class SecurityConfig {
                 .requestMatchers(
                     HttpMethod.PATCH,
                     "/api/orders/{orderId}/accept",
-                    "/api/orders/{orderId}/deliver"
+                    "/api/orders/{orderId}/deliver",
+                    "/api/orders/{orderId}/reject"
                 ).hasRole("OWNER")
                 .requestMatchers(
                     HttpMethod.POST,

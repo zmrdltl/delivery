@@ -60,6 +60,16 @@ public class OrderController {
         );
     }
 
+    @PatchMapping("/{orderId}/reject")
+    public ResponseEntity<OrderResponse> reject(
+        @AuthenticationPrincipal Long ownerId,
+        @PathVariable Long orderId
+    ) {
+        return ResponseEntity.ok(
+            orderService.reject(ownerId, orderId)
+        );
+    }
+
     @PatchMapping("/{orderId}/cancel")
     public ResponseEntity<OrderResponse> cancel(
         @AuthenticationPrincipal Long customerId,

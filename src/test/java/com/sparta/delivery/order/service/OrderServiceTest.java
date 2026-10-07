@@ -9,6 +9,7 @@ import com.sparta.delivery.order.entity.Order;
 import com.sparta.delivery.order.entity.OrderItem;
 import com.sparta.delivery.order.repository.OrderItemRepository;
 import com.sparta.delivery.order.repository.OrderRepository;
+import com.sparta.delivery.payment.repository.PaymentRepository;
 import com.sparta.delivery.store.entity.Store;
 import com.sparta.delivery.store.repository.StoreRepository;
 import com.sparta.delivery.user.entity.User;
@@ -23,6 +24,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -45,6 +49,8 @@ class OrderServiceTest {
     private StoreRepository storeRepository;
     @Mock
     private MenuRepository menuRepository;
+    @Mock
+    private PaymentRepository paymentRepository;
 
     private OrderService orderService;
     private User owner;
@@ -57,7 +63,8 @@ class OrderServiceTest {
     void setUp() {
         orderService = new OrderService(
             orderRepository, orderItemRepository, userRepository,
-            storeRepository, menuRepository
+            storeRepository, menuRepository, paymentRepository,
+            Clock.fixed(Instant.parse("2026-10-07T12:04:00Z"), ZoneOffset.UTC)
         );
         owner = user(1L, User.Role.OWNER);
         customer = user(2L, User.Role.CUSTOMER);
@@ -325,7 +332,11 @@ class OrderServiceTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = Order.Status.class, names = "ORDERED", mode = EnumSource.Mode.EXCLUDE)
+    @EnumSource(
+        value = Order.Status.class,
+        names = {"ORDERED", "PAID"},
+        mode = EnumSource.Mode.EXCLUDE
+    )
     void cancelRejectsOtherStatesWithoutChangingOrder(Order.Status status) {
         fields(order, "status", status);
         when(orderRepository.findWithLockById(30L)).thenReturn(Optional.of(order));

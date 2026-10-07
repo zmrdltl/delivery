@@ -32,13 +32,27 @@ public class Payment extends BaseEntity {
     @Column(nullable = false)
     private Method method;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status;
+
     public Payment(Order order, Method method) {
         this.order = order;
         this.amount = order.getTotalPrice();
         this.method = method;
+        this.status = Status.PAID;
     }
 
     public enum Method {
         CARD
+    }
+
+    public enum Status {
+        PAID,
+        CANCELED
+    }
+
+    public void markCanceled() {
+        this.status = Status.CANCELED;
     }
 }
