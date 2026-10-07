@@ -81,7 +81,8 @@ public class SecurityConfig {
                 ).hasRole("CUSTOMER")
                 .requestMatchers(
                     HttpMethod.GET,
-                    "/api/orders"
+                    "/api/orders",
+                    "/api/orders/{orderId}"
                 ).hasAnyRole("CUSTOMER", "OWNER")
                 .requestMatchers(
                     HttpMethod.POST,

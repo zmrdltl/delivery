@@ -242,4 +242,31 @@ public class OrderService {
             orderItemRepository.findAllByOrderId(orderId)
         );
     }
+
+    @Transactional(readOnly = true)
+    public OrderResponse findOne(Long userId, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "주문을 찾을 수 없습니다."
+            ));
+
+        boolean isOrderCustomer = order.getCustomer()
+            .getId().equals(userId);
+
+        boolean isStoreOwner = order.getStore()
+            .getOwner().getId().equals(userId);
+
+        if (!isOrderCustomer && !isStoreOwner) {
+            throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "해당 주문을 조회할 권한이 없습니다."
+            );
+        }
+
+        return new OrderResponse(
+            order,
+            orderItemRepository.findAllByOrderId(orderId)
+        );
+    }
 }

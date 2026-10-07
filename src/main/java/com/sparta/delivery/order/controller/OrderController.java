@@ -69,4 +69,14 @@ public class OrderController {
             orderService.cancel(customerId, orderId)
         );
     }
+
+    @GetMapping("/{orderId}")
+    public ResponseEntity<OrderResponse> findOne(
+        @AuthenticationPrincipal Long userId,
+        @PathVariable Long orderId
+    ) {
+        return ResponseEntity.ok(
+            orderService.findOne(userId, orderId)
+        );
+    }
 }
