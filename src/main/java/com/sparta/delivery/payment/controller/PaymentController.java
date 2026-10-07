@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/orders/{orderId}/payments")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class PaymentController {
 
     private final PaymentService paymentService;
 
-    @PostMapping
+    @PostMapping("/orders/{orderId}/payments")
     public ResponseEntity<PaymentResponse> create(
         @AuthenticationPrincipal Long customerId,
         @PathVariable Long orderId,
