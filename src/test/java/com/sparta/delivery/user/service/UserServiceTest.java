@@ -15,10 +15,12 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.sql.SQLException;
 import java.util.Optional;
 
 import static com.sparta.delivery.support.ServiceFixtures.*;
@@ -51,14 +53,14 @@ class UserServiceTest {
             "password", "password123",
             "role", role
         );
-        when(userRepository.save(any(User.class))).thenAnswer(invocation ->
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation ->
             fields(invocation.getArgument(0), "id", 1L)
         );
 
         UserResponse response = userService.signup(request);
 
         ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(saved.capture());
+        verify(userRepository).saveAndFlush(saved.capture());
         assertNotEquals(request.getPassword(), saved.getValue().getPassword());
         assertTrue(passwordEncoder.matches(
             request.getPassword(), saved.getValue().getPassword()
@@ -77,7 +79,37 @@ class UserServiceTest {
 
         assertStatus(HttpStatus.CONFLICT, () -> userService.signup(request));
 
-        verify(userRepository, never()).save(any(User.class));
+        verify(userRepository, never()).saveAndFlush(any(User.class));
+    }
+
+    @Test
+    void databaseUniqueConflictAfterPrecheckReturnsConflict() {
+        SignupRequest request = signupRequest();
+        DataIntegrityViolationException conflict = new DataIntegrityViolationException(
+            "unique constraint violation",
+            new SQLException("duplicate login ID", "23505")
+        );
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(conflict);
+
+        assertStatus(HttpStatus.CONFLICT, () -> userService.signup(request));
+
+        verify(userRepository).existsByLoginId("testuser");
+        verify(userRepository).saveAndFlush(any(User.class));
+    }
+
+    @Test
+    void unrelatedDatabaseIntegrityFailureIsNotReportedAsDuplicateSignup() {
+        SignupRequest request = signupRequest();
+        DataIntegrityViolationException failure = new DataIntegrityViolationException(
+            "not-null constraint violation",
+            new SQLException("required column missing", "23502")
+        );
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(failure);
+
+        assertSame(failure, assertThrows(
+            DataIntegrityViolationException.class,
+            () -> userService.signup(request)
+        ));
     }
 
     @Test
@@ -115,6 +147,13 @@ class UserServiceTest {
         assertStatus(HttpStatus.UNAUTHORIZED, () -> userService.login(request));
 
         verifyNoInteractions(jwtUtil);
+    }
+
+    private SignupRequest signupRequest() {
+        return fields(
+            new SignupRequest(), "loginId", "testuser",
+            "password", "password123", "role", User.Role.CUSTOMER
+        );
     }
 
     private LoginRequest loginRequest(String loginId, String password) {

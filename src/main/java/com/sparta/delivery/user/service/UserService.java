@@ -8,11 +8,14 @@ import com.sparta.delivery.user.dto.response.UserResponse;
 import com.sparta.delivery.user.entity.User;
 import com.sparta.delivery.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.sql.SQLException;
 
 @Service
 @RequiredArgsConstructor
@@ -40,9 +43,31 @@ public class UserService {
                 request.getRole()
         );
 
-        User savedUser = userRepository.save(user);
+        try {
+            User savedUser = userRepository.saveAndFlush(user);
+            return new UserResponse(savedUser);
+        } catch (DataIntegrityViolationException exception) {
+            if (isUniqueConstraintViolation(exception)) {
+                throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "이미 사용 중인 아이디입니다.",
+                    exception
+                );
+            }
 
-        return new UserResponse(savedUser);
+            throw exception;
+        }
+    }
+
+    private boolean isUniqueConstraintViolation(Throwable exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sqlException
+                && "23505".equals(sqlException.getSQLState())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private final JwtUtil jwtUtil;

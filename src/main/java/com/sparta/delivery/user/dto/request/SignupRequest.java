@@ -1,10 +1,13 @@
 package com.sparta.delivery.user.dto.request;
 
 import com.sparta.delivery.user.entity.User;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+
+import java.nio.charset.StandardCharsets;
 
 @Getter
 public class SignupRequest {
@@ -18,5 +21,11 @@ public class SignupRequest {
     private String password;
 
     @NotNull(message = "역할은 필수입니다.")
-    private  User.Role role;
+    private User.Role role;
+
+    @AssertTrue(message = "비밀번호는 UTF-8 기준 72바이트 이하여야 합니다.")
+    public boolean isPasswordWithinByteLimit() {
+        return password == null
+            || password.getBytes(StandardCharsets.UTF_8).length <= 72;
+    }
 }
