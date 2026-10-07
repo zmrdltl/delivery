@@ -78,6 +78,10 @@ public class SecurityConfig {
                     HttpMethod.GET,
                     "/api/orders"
                 ).hasAnyRole("CUSTOMER", "OWNER")
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/orders/{orderId}/payments"
+                ).hasRole("CUSTOMER")
                 .anyRequest().authenticated()
             );
 

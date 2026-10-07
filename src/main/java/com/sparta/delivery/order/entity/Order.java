@@ -57,4 +57,8 @@ public class Order extends BaseEntity {
         CANCELED,
         REJECTED
     }
+
+    public void markPaid() {
+        this.status = Status.PAID;
+    }
 }
