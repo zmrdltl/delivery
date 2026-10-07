@@ -66,6 +66,10 @@ public class SecurityConfig {
                     HttpMethod.PUT,
                     "/api/menus/{menuId}"
                 ).hasRole("OWNER")
+                .requestMatchers(
+                    HttpMethod.DELETE,
+                    "/api/menus/{menuId}"
+                ).hasRole("OWNER")
                 .anyRequest().authenticated()
             );
 

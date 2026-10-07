@@ -56,4 +56,14 @@ public class MenuController {
 
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/{menuId}")
+    public ResponseEntity<Void> delete(
+        @AuthenticationPrincipal Long ownerId,
+        @PathVariable Long menuId
+    ) {
+        menuService.delete(ownerId, menuId);
+
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -94,4 +94,22 @@ public class MenuService {
 
         return new MenuResponse(menu);
     }
+
+    @Transactional
+    public void delete(Long ownerId, Long menuId) {
+        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "메뉴를 찾을 수 없습니다."
+            ));
+
+        if(!menu.getStore().getOwner().getId().equals(ownerId)) {
+            throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "본인 가게의 메뉴만 삭제할 수 있습니다."
+            );
+        }
+
+        menu.delete();
+    }
 }
