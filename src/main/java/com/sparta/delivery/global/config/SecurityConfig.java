@@ -43,7 +43,11 @@ public class SecurityConfig {
                     "/api/users",
                     "/api/users/login"
                 ).permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/stores").hasRole("OWNER")
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/stores",
+                    "/api/menus"
+                ).hasRole("OWNER")
                 .anyRequest().authenticated()
             );
 
