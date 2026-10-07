@@ -69,4 +69,8 @@ public class Order extends BaseEntity {
     public void markDelivered() {
         this.status = Status.DELIVERED;
     }
+
+    public void markCanceled() {
+        this.status = Status.CANCELED;
+    }
 }

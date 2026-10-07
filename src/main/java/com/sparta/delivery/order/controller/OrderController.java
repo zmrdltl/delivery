@@ -59,4 +59,14 @@ public class OrderController {
             orderService.deliver(ownerId, orderId)
         );
     }
+
+    @PatchMapping("/{orderId}/cancel")
+    public ResponseEntity<OrderResponse> cancel(
+        @AuthenticationPrincipal Long customerId,
+        @PathVariable Long orderId
+    ) {
+        return ResponseEntity.ok(
+            orderService.cancel(customerId, orderId)
+        );
+    }
 }

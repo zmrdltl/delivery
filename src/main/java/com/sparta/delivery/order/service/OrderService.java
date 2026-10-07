@@ -212,4 +212,34 @@ public class OrderService {
 
         return order;
     }
+
+    @Transactional
+    public OrderResponse cancel(Long customerId, Long orderId) {
+        Order order = orderRepository.findWithLockById(orderId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "주문을 찾을 수 없습니다."
+            ));
+
+        if (!order.getCustomer().getId().equals(customerId)) {
+            throw new ResponseStatusException(
+                HttpStatus.FORBIDDEN,
+                "본인의 주문만 취소할 수 있습니다."
+            );
+        }
+
+        if (order.getStatus() != Order.Status.ORDERED) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "주문 요청 상태에서만 취소할 수 있습니다."
+            );
+        }
+
+        order.markCanceled();
+
+        return new OrderResponse(
+            order,
+            orderItemRepository.findAllByOrderId(orderId)
+        );
+    }
 }

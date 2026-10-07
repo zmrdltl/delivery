@@ -87,6 +87,10 @@ public class SecurityConfig {
                     HttpMethod.POST,
                     "/api/orders/{orderId}/payments"
                 ).hasRole("CUSTOMER")
+                .requestMatchers(
+                    HttpMethod.PATCH,
+                    "/api/orders/{orderId}/cancel"
+                ).hasRole("CUSTOMER")
                 .anyRequest().authenticated()
             );
 
