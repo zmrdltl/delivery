@@ -2,6 +2,7 @@ package com.sparta.delivery.global.config;
 
 import com.sparta.delivery.global.security.JwtAuthenticationFilter;
 import com.sparta.delivery.global.security.JwtUtil;
+import com.sparta.delivery.global.security.SecurityErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -22,7 +23,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtUtil jwtUtil)
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtUtil jwtUtil,
+            SecurityErrorHandler securityErrorHandler
+    )
         throws Exception {
 
         http
@@ -35,6 +40,10 @@ public class SecurityConfig {
             .httpBasic(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(securityErrorHandler)
+                .accessDeniedHandler(securityErrorHandler)
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/error").permitAll()
