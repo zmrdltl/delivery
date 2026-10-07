@@ -1,6 +1,9 @@
 package com.sparta.delivery.user.service;
 
+import com.sparta.delivery.global.security.JwtUtil;
+import com.sparta.delivery.user.dto.request.LoginRequest;
 import com.sparta.delivery.user.dto.request.SignupRequest;
+import com.sparta.delivery.user.dto.response.LoginResponse;
 import com.sparta.delivery.user.dto.response.UserResponse;
 import com.sparta.delivery.user.entity.User;
 import com.sparta.delivery.user.repository.UserRepository;
@@ -40,5 +43,26 @@ public class UserService {
         User savedUser = userRepository.save(user);
 
         return new UserResponse(savedUser);
+    }
+
+    private final JwtUtil jwtUtil;
+
+    @Transactional(readOnly = true)
+    public LoginResponse login(LoginRequest request) {
+        User user = userRepository.findByLoginId(request.getLoginId())
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "아이디 또는 비밀번호가 올바르지 않습니다."
+            ));
+
+        if (!passwordEncoder.matches(
+            request.getPassword(), user.getPassword())) {
+                throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "아이디 또는 비밀번호가 올바르지 않습니다."
+                );
+            }
+
+        return new LoginResponse(jwtUtil.createToken(user));
     }
 }
