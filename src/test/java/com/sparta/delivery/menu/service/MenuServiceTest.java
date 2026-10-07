@@ -1,5 +1,6 @@
 package com.sparta.delivery.menu.service;
 
+import com.sparta.delivery.global.dto.response.PageResponse;
 import com.sparta.delivery.menu.dto.request.CreateMenuRequest;
 import com.sparta.delivery.menu.dto.request.UpdateMenuRequest;
 import com.sparta.delivery.menu.dto.response.MenuResponse;
@@ -11,8 +12,16 @@ import com.sparta.delivery.user.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 
 import java.util.List;
@@ -75,14 +84,81 @@ class MenuServiceTest {
     }
 
     @Test
-    void listMapsActiveMenusToResponses() {
-        when(menuRepository.findAllByDeletedFalse()).thenReturn(List.of(menu));
+    void listReturnsRequestedPageWithLatestFirstAndStableOrdering() {
+        when(menuRepository.findAllByDeletedFalse(any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(menu), PageRequest.of(1, 10), 21));
 
-        List<MenuResponse> response = menuService.findAll();
+        PageResponse<MenuResponse> response = menuService.findAll(1, 10);
 
-        assertEquals(1, response.size());
-        assertEquals(20L, response.getFirst().getId());
-        assertEquals(10L, response.getFirst().getStoreId());
+        assertEquals(1, response.getContent().size());
+        assertEquals(20L, response.getContent().getFirst().getId());
+        assertEquals(10L, response.getContent().getFirst().getStoreId());
+        assertEquals(1, response.getPage());
+        assertEquals(10, response.getSize());
+        assertEquals(21, response.getTotalElements());
+        assertEquals(3, response.getTotalPages());
+        assertFalse(response.isFirst());
+        assertFalse(response.isLast());
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(menuRepository).findAllByDeletedFalse(captor.capture());
+        Pageable pageable = captor.getValue();
+        assertEquals(1, pageable.getPageNumber());
+        assertEquals(10, pageable.getPageSize());
+        assertEquals(
+            Sort.by(Sort.Direction.DESC, "createdAt", "id"),
+            pageable.getSort()
+        );
+    }
+
+    @Test
+    void emptyMenuListReturnsEmptyPageMetadata() {
+        when(menuRepository.findAllByDeletedFalse(any(Pageable.class)))
+            .thenReturn(Page.empty(PageRequest.of(0, 10)));
+
+        PageResponse<MenuResponse> response = menuService.findAll(0, 10);
+
+        assertTrue(response.getContent().isEmpty());
+        assertEquals(0, response.getTotalElements());
+        assertEquals(0, response.getTotalPages());
+        assertTrue(response.isFirst());
+        assertTrue(response.isLast());
+    }
+
+    @Test
+    void pageBeyondLastReturnsEmptyContentWithExistingTotal() {
+        when(menuRepository.findAllByDeletedFalse(any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(), PageRequest.of(3, 10), 21));
+
+        PageResponse<MenuResponse> response = menuService.findAll(3, 10);
+
+        assertTrue(response.getContent().isEmpty());
+        assertEquals(21, response.getTotalElements());
+        assertEquals(3, response.getTotalPages());
+        assertFalse(response.isFirst());
+        assertTrue(response.isLast());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "-1, 10", "0, 0", "0, -1", "0, 101", "2147483647, 100"
+    })
+    void invalidPaginationDoesNotQueryRepository(int page, int size) {
+        assertStatus(HttpStatus.BAD_REQUEST, () -> menuService.findAll(page, size));
+
+        verifyNoInteractions(menuRepository, storeRepository);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0, 1", "0, 100", "2147483647, 1"})
+    void allowedPaginationBoundariesAreUsed(int page, int size) {
+        when(menuRepository.findAllByDeletedFalse(any(Pageable.class)))
+            .thenAnswer(invocation -> Page.empty(invocation.getArgument(0)));
+
+        PageResponse<MenuResponse> response = menuService.findAll(page, size);
+
+        assertEquals(page, response.getPage());
+        assertEquals(size, response.getSize());
     }
 
     @Test

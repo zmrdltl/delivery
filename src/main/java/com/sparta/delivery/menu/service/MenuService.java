@@ -1,5 +1,6 @@
 package com.sparta.delivery.menu.service;
 
+import com.sparta.delivery.global.dto.response.PageResponse;
 import com.sparta.delivery.menu.dto.request.UpdateMenuRequest;
 import com.sparta.delivery.menu.entity.Menu;
 import com.sparta.delivery.menu.dto.request.CreateMenuRequest;
@@ -8,12 +9,14 @@ import com.sparta.delivery.menu.repository.MenuRepository;
 import com.sparta.delivery.store.entity.Store;
 import com.sparta.delivery.store.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -49,11 +52,37 @@ public class MenuService {
     }
 
     @Transactional(readOnly = true)
-    public List<MenuResponse> findAll() {
-        return menuRepository.findAllByDeletedFalse()
-            .stream()
-            .map(MenuResponse::new)
-            .toList();
+    public PageResponse<MenuResponse> findAll(int page, int size) {
+        if (page < 0) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "페이지 번호는 0 이상이어야 합니다."
+            );
+        }
+
+        if (size < 1 || size > 100) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "페이지 크기는 1부터 100까지 가능합니다."
+            );
+        }
+
+        if ((long) page * size > Integer.MAX_VALUE) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "페이지 조회 범위가 처리 가능한 한도를 초과했습니다."
+            );
+        }
+
+        Pageable pageable = PageRequest.of(
+            page,
+            size,
+            Sort.by(Sort.Direction.DESC, "createdAt", "id")
+        );
+        Page<MenuResponse> menus = menuRepository.findAllByDeletedFalse(pageable)
+            .map(MenuResponse::new);
+
+        return new PageResponse<>(menus);
     }
 
     @Transactional(readOnly = true)

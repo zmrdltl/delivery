@@ -1,19 +1,16 @@
 package com.sparta.delivery.menu.controller;
 
+import com.sparta.delivery.global.dto.response.PageResponse;
 import com.sparta.delivery.menu.dto.request.CreateMenuRequest;
 import com.sparta.delivery.menu.dto.request.UpdateMenuRequest;
 import com.sparta.delivery.menu.dto.response.MenuResponse;
-import com.sparta.delivery.menu.repository.MenuRepository;
 import com.sparta.delivery.menu.service.MenuService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/menus")
@@ -21,7 +18,6 @@ import java.util.List;
 public class MenuController {
 
     private final MenuService menuService;
-    private final MenuRepository menuRepository;
 
     @PostMapping
     public ResponseEntity<MenuResponse> create(
@@ -33,8 +29,11 @@ public class MenuController {
     }
 
     @GetMapping
-    public ResponseEntity<List<MenuResponse>> findAll() {
-        return ResponseEntity.ok(menuService.findAll());
+    public ResponseEntity<PageResponse<MenuResponse>> findAll(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(menuService.findAll(page, size));
     }
 
     @GetMapping("/{menuId}")
