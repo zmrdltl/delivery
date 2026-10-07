@@ -1,0 +1,157 @@
+package com.sparta.delivery.order.service;
+
+import com.sparta.delivery.menu.entity.Menu;
+import com.sparta.delivery.menu.repository.MenuRepository;
+import com.sparta.delivery.order.dto.request.CreateOrderRequest;
+import com.sparta.delivery.order.dto.request.OrderItemRequest;
+import com.sparta.delivery.order.dto.response.OrderResponse;
+import com.sparta.delivery.order.entity.Order;
+import com.sparta.delivery.order.entity.OrderItem;
+import com.sparta.delivery.order.repository.OrderItemRepository;
+import com.sparta.delivery.order.repository.OrderRepository;
+import com.sparta.delivery.store.entity.Store;
+import com.sparta.delivery.store.repository.StoreRepository;
+import com.sparta.delivery.user.entity.User;
+import com.sparta.delivery.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final UserRepository userRepository;
+    private final StoreRepository storeRepository;
+    private final MenuRepository menuRepository;
+
+    @Transactional
+    public OrderResponse create(
+        Long customerId,
+        CreateOrderRequest request
+    ) {
+        User customer = userRepository.findById(customerId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "회원 정보를 확인할 수 없습니다."
+            ));
+
+        Store store = storeRepository.findById(request.getStoreId())
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "가게를 찾을 수 없습니다."
+            ));
+
+        List<Menu> menus = new ArrayList<>();
+        long totalPrice = 0;
+
+        try {
+            for (OrderItemRequest item : request.getItems()) {
+                Menu menu = menuRepository
+                    .findByIdAndDeletedFalse(item.getMenuId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "메뉴를 찾을 수 없습니다."
+                    ));
+
+                if (!menu.getStore().getId().equals(store.getId())) {
+                    throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "같은 가게의 메뉴만 함께 주문할 수 있습니다."
+                    );
+                }
+
+                long itemTotalPrice = Math.multiplyExact(
+                    menu.getPrice(),
+                    (long) item.getQuantity()
+                );
+
+                totalPrice = Math.addExact(
+                    totalPrice,
+                    itemTotalPrice
+                );
+
+                menus.add(menu);
+            }
+        } catch (ArithmeticException exception) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "주문 금액이 처리 가능한 범위를 초과했습니다.",
+                exception
+            );
+        }
+
+        Order order = new Order(
+            customer,
+            store,
+            request.getAddress(),
+            totalPrice
+        );
+
+        Order savedOrder = orderRepository.save(order);
+
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        for (int i = 0; i < request.getItems().size(); i++) {
+            OrderItem orderItem = new OrderItem(
+                savedOrder,
+                menus.get(i),
+                request.getItems().get(i).getQuantity()
+            );
+
+            orderItems.add(orderItem);
+        }
+
+        List<OrderItem> savedItems = orderItemRepository
+            .saveAll(orderItems);
+
+        return new OrderResponse(savedOrder, savedItems);
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponse> findAll(Long userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "회원 정보를 확인할 수 없습니다."
+            ));
+
+        List<Order> orders = switch (user.getRole()) {
+            case CUSTOMER -> orderRepository
+                .findAllByCustomerId(userId);
+            case OWNER -> orderRepository
+                .findAllByStoreOwnerId(userId);
+        };
+
+        if (orders.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> orderIds = orders.stream()
+            .map(Order::getId)
+            .toList();
+
+        Map<Long, List<OrderItem>> itemsByOrderId = orderItemRepository
+            .findAllByOrderIdIn(orderIds)
+            .stream()
+            .collect(Collectors.groupingBy(
+                item -> item.getOrder().getId()
+            ));
+
+        return orders.stream()
+            .map(order -> new OrderResponse(
+                order,
+                itemsByOrderId.getOrDefault(order.getId(), List.of())
+            ))
+            .toList();
+    }
+}

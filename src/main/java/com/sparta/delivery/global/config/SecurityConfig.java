@@ -70,6 +70,14 @@ public class SecurityConfig {
                     HttpMethod.DELETE,
                     "/api/menus/{menuId}"
                 ).hasRole("OWNER")
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/api/orders"
+                ).hasRole("CUSTOMER")
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/orders"
+                ).hasAnyRole("CUSTOMER", "OWNER")
                 .anyRequest().authenticated()
             );
 
