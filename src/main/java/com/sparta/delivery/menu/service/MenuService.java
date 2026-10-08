@@ -102,7 +102,7 @@ public class MenuService {
         Long menuId,
         UpdateMenuRequest request
     ) {
-        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+        Menu menu = menuRepository.findWithLockByIdAndDeletedFalse(menuId)
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
                 "메뉴를 찾을 수 없습니다."
@@ -126,7 +126,7 @@ public class MenuService {
 
     @Transactional
     public void delete(Long ownerId, Long menuId) {
-        Menu menu = menuRepository.findByIdAndDeletedFalse(menuId)
+        Menu menu = menuRepository.findWithLockByIdAndDeletedFalse(menuId)
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND,
                 "메뉴를 찾을 수 없습니다."

@@ -39,5 +39,26 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'postgres'
+    }
+}
+
+tasks.register('integrationTest', Test) {
+    group = 'verification'
+    description = 'PostgreSQL에서 메뉴 수정·삭제 동시성을 검증합니다.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'postgres'
+    }
+    shouldRunAfter tasks.named('test')
+    outputs.upToDateWhen { false }
+    doFirst {
+        ['DB_TEST_URL', 'DB_TEST_USERNAME', 'DB_TEST_PASSWORD'].each { key ->
+            if (!System.getenv(key)) {
+                throw new GradleException("${key} 환경변수가 필요합니다. docs/concurrency.md를 확인하세요.")
+            }
+        }
+    }
 }

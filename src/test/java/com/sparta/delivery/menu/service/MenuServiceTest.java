@@ -177,7 +177,7 @@ class MenuServiceTest {
 
     @Test
     void missingMenuCannotBeUpdated() {
-        when(menuRepository.findByIdAndDeletedFalse(20L)).thenReturn(Optional.empty());
+        when(menuRepository.findWithLockByIdAndDeletedFalse(20L)).thenReturn(Optional.empty());
 
         assertStatus(HttpStatus.NOT_FOUND, () ->
             menuService.update(1L, 20L, updateRequest())
@@ -186,14 +186,14 @@ class MenuServiceTest {
 
     @Test
     void missingMenuCannotBeDeleted() {
-        when(menuRepository.findByIdAndDeletedFalse(20L)).thenReturn(Optional.empty());
+        when(menuRepository.findWithLockByIdAndDeletedFalse(20L)).thenReturn(Optional.empty());
 
         assertStatus(HttpStatus.NOT_FOUND, () -> menuService.delete(1L, 20L));
     }
 
     @Test
     void ownUpdateReplacesEditableFieldsIncludingOptionalDescription() {
-        when(menuRepository.findByIdAndDeletedFalse(20L)).thenReturn(Optional.of(menu));
+        when(menuRepository.findWithLockByIdAndDeletedFalse(20L)).thenReturn(Optional.of(menu));
 
         MenuResponse response = menuService.update(1L, 20L, updateRequest());
 
@@ -206,7 +206,7 @@ class MenuServiceTest {
 
     @Test
     void otherOwnerUpdateLeavesMenuUnchanged() {
-        when(menuRepository.findByIdAndDeletedFalse(20L)).thenReturn(Optional.of(menu));
+        when(menuRepository.findWithLockByIdAndDeletedFalse(20L)).thenReturn(Optional.of(menu));
 
         assertStatus(HttpStatus.FORBIDDEN, () ->
             menuService.update(3L, 20L, updateRequest())
@@ -219,7 +219,7 @@ class MenuServiceTest {
 
     @Test
     void ownDeletionMarksMenuWithoutDeletingRow() {
-        when(menuRepository.findByIdAndDeletedFalse(20L)).thenReturn(Optional.of(menu));
+        when(menuRepository.findWithLockByIdAndDeletedFalse(20L)).thenReturn(Optional.of(menu));
 
         menuService.delete(1L, 20L);
 
@@ -230,7 +230,7 @@ class MenuServiceTest {
 
     @Test
     void otherOwnerDeletionLeavesMenuActive() {
-        when(menuRepository.findByIdAndDeletedFalse(20L)).thenReturn(Optional.of(menu));
+        when(menuRepository.findWithLockByIdAndDeletedFalse(20L)).thenReturn(Optional.of(menu));
 
         assertStatus(HttpStatus.FORBIDDEN, () -> menuService.delete(3L, 20L));
 
