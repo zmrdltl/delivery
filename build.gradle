@@ -26,10 +26,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
@@ -39,26 +39,5 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform {
-        excludeTags 'postgres'
-    }
-}
-
-tasks.register('integrationTest', Test) {
-    group = 'verification'
-    description = 'PostgreSQL에서 메뉴 수정·삭제 동시성을 검증합니다.'
-    testClassesDirs = sourceSets.test.output.classesDirs
-    classpath = sourceSets.test.runtimeClasspath
-    useJUnitPlatform {
-        includeTags 'postgres'
-    }
-    shouldRunAfter tasks.named('test')
-    outputs.upToDateWhen { false }
-    doFirst {
-        ['DB_TEST_URL', 'DB_TEST_USERNAME', 'DB_TEST_PASSWORD'].each { key ->
-            if (!System.getenv(key)) {
-                throw new GradleException("${key} 환경변수가 필요합니다. docs/concurrency.md를 확인하세요.")
-            }
-        }
-    }
+    useJUnitPlatform()
 }

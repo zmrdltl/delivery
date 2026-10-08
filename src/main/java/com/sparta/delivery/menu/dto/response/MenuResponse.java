@@ -1,6 +1,7 @@
 package com.sparta.delivery.menu.dto.response;
 
 import com.sparta.delivery.menu.entity.Menu;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 
 @Getter
@@ -10,6 +11,7 @@ public class MenuResponse {
     private final Long storeId;
     private final String name;
     private final long price;
+    @Schema(types = {"string", "null"})
     private final String description;
 
     public MenuResponse(Menu menu) {

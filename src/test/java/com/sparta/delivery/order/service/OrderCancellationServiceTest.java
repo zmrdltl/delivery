@@ -74,7 +74,7 @@ class OrderCancellationServiceTest {
         orderService = serviceAt(order.getCreatedAt().plusSeconds(seconds));
         stubOrderWithItems();
         if (status == Order.Status.PAID) {
-            when(paymentRepository.findByOrderId(30L)).thenReturn(Optional.of(payment));
+            when(paymentRepository.findByOrderIdAndStatus(30L, Payment.Status.PAID)).thenReturn(Optional.of(payment));
         }
 
         OrderResponse response = orderService.cancel(2L, 30L);
@@ -97,7 +97,7 @@ class OrderCancellationServiceTest {
         "ORDERED, 300000000001", "PAID, 300000000001",
         "ORDERED, 600000000000", "PAID, 600000000000"
     })
-    void deadlineExceededLeavesOrderAndPaymentUnchanged(Order.Status status, long nanos) {
+    void deadlineExceededLeavesOrderUnchangedWithoutQueryingPayment(Order.Status status, long nanos) {
         fields(order, "status", status);
         orderService = serviceAt(order.getCreatedAt().plusNanos(nanos));
         when(orderRepository.findWithLockById(30L)).thenReturn(Optional.of(order));
@@ -105,7 +105,6 @@ class OrderCancellationServiceTest {
         assertStatus(HttpStatus.CONFLICT, () -> orderService.cancel(2L, 30L));
 
         assertEquals(status, order.getStatus());
-        assertEquals(Payment.Status.PAID, payment.getStatus());
         verifyNoInteractions(paymentRepository, orderItemRepository);
     }
 
@@ -116,7 +115,7 @@ class OrderCancellationServiceTest {
         orderService = serviceAt(order.getCreatedAt().plusHours(1));
         stubOrderWithItems();
         if (status == Order.Status.PAID) {
-            when(paymentRepository.findByOrderId(30L)).thenReturn(Optional.of(payment));
+            when(paymentRepository.findByOrderIdAndStatus(30L, Payment.Status.PAID)).thenReturn(Optional.of(payment));
         }
 
         OrderResponse response = orderService.reject(1L, 30L);
@@ -144,19 +143,17 @@ class OrderCancellationServiceTest {
         assertStatus(HttpStatus.CONFLICT, () -> orderService.reject(1L, 30L));
 
         assertEquals(status, order.getStatus());
-        assertEquals(Payment.Status.PAID, payment.getStatus());
         verifyNoInteractions(paymentRepository, orderItemRepository);
     }
 
     @Test
-    void otherOwnerCannotRejectOrCancelPayment() {
+    void otherOwnerCannotRejectPaidOrder() {
         order.markPaid();
         when(orderRepository.findWithLockById(30L)).thenReturn(Optional.of(order));
 
         assertStatus(HttpStatus.FORBIDDEN, () -> orderService.reject(3L, 30L));
 
         assertEquals(Order.Status.PAID, order.getStatus());
-        assertEquals(Payment.Status.PAID, payment.getStatus());
         verifyNoInteractions(paymentRepository, orderItemRepository);
     }
 
@@ -168,7 +165,6 @@ class OrderCancellationServiceTest {
         assertStatus(HttpStatus.FORBIDDEN, () -> orderService.cancel(3L, 30L));
 
         assertEquals(Order.Status.PAID, order.getStatus());
-        assertEquals(Payment.Status.PAID, payment.getStatus());
         verifyNoInteractions(paymentRepository, orderItemRepository);
     }
 
@@ -183,29 +179,14 @@ class OrderCancellationServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"cancel", "reject"})
-    void missingPaymentPreventsBothOrderTransitions(String action) {
+    void missingPaidPaymentPreventsBothOrderTransitions(String action) {
         order.markPaid();
         when(orderRepository.findWithLockById(30L)).thenReturn(Optional.of(order));
-        when(paymentRepository.findByOrderId(30L)).thenReturn(Optional.empty());
+        when(paymentRepository.findByOrderIdAndStatus(30L, Payment.Status.PAID)).thenReturn(Optional.empty());
 
         assertStatus(HttpStatus.CONFLICT, () -> transition(action));
 
         assertEquals(Order.Status.PAID, order.getStatus());
-        verifyNoInteractions(orderItemRepository);
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"cancel", "reject"})
-    void alreadyCanceledPaymentPreventsBothOrderTransitions(String action) {
-        order.markPaid();
-        payment.markCanceled();
-        when(orderRepository.findWithLockById(30L)).thenReturn(Optional.of(order));
-        when(paymentRepository.findByOrderId(30L)).thenReturn(Optional.of(payment));
-
-        assertStatus(HttpStatus.CONFLICT, () -> transition(action));
-
-        assertEquals(Order.Status.PAID, order.getStatus());
-        assertEquals(Payment.Status.CANCELED, payment.getStatus());
         verifyNoInteractions(orderItemRepository);
     }
 

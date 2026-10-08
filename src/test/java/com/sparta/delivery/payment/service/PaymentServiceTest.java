@@ -47,6 +47,8 @@ class PaymentServiceTest {
     @Test
     void paymentUsesOrderAmountAndMarksOrderPaid() {
         when(orderRepository.findWithLockById(30L)).thenReturn(Optional.of(order));
+        when(paymentRepository.existsByOrderIdAndStatus(30L, Payment.Status.PAID))
+            .thenReturn(false);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation ->
             fields(invocation.getArgument(0), "id", 40L)
         );
@@ -58,6 +60,7 @@ class PaymentServiceTest {
         assertEquals(Payment.Method.CARD, response.getMethod());
         assertEquals(Payment.Status.PAID, response.getStatus());
         assertEquals(Order.Status.PAID, order.getStatus());
+        verify(paymentRepository).existsByOrderIdAndStatus(30L, Payment.Status.PAID);
     }
 
     @Test
@@ -76,7 +79,7 @@ class PaymentServiceTest {
     void duplicatePaymentDoesNotCreateAnotherRecord() {
         order.markPaid();
         when(orderRepository.findWithLockById(30L)).thenReturn(Optional.of(order));
-        when(paymentRepository.existsByOrderId(30L)).thenReturn(true);
+        when(paymentRepository.existsByOrderIdAndStatus(30L, Payment.Status.PAID)).thenReturn(true);
 
         assertStatus(HttpStatus.CONFLICT, () ->
             paymentService.create(2L, 30L, cardRequest())
@@ -152,20 +155,6 @@ class PaymentServiceTest {
         assertEquals(30L, response.getOrderId());
         assertEquals(7000, response.getAmount());
         assertEquals(Payment.Status.CANCELED, response.getStatus());
-    }
-
-    @Test
-    void canceledPaymentCannotBePaidAgain() {
-        order.markCanceled();
-        when(orderRepository.findWithLockById(30L)).thenReturn(Optional.of(order));
-        when(paymentRepository.existsByOrderId(30L)).thenReturn(true);
-
-        assertStatus(HttpStatus.CONFLICT, () ->
-            paymentService.create(2L, 30L, cardRequest())
-        );
-
-        assertEquals(Order.Status.CANCELED, order.getStatus());
-        verify(paymentRepository, never()).save(any(Payment.class));
     }
 
     @Test

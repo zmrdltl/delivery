@@ -40,7 +40,7 @@ public class PaymentService {
             );
         }
 
-        if (paymentRepository.existsByOrderId(orderId)) {
+        if (paymentRepository.existsByOrderIdAndStatus(orderId, Payment.Status.PAID)) {
             throw new ResponseStatusException(
                 HttpStatus.CONFLICT,
                 "이미 결제된 주문입니다."

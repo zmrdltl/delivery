@@ -9,9 +9,9 @@ import java.util.Optional;
 public interface PaymentRepository
     extends JpaRepository<Payment, Long> {
 
-    boolean existsByOrderId(Long orderId);
+    boolean existsByOrderIdAndStatus(Long orderId, Payment.Status status);
 
-    Optional<Payment> findByOrderId(Long orderId);
+    Optional<Payment> findByOrderIdAndStatus(Long orderId, Payment.Status status);
 
     List<Payment> findAllByOrderCustomerIdOrderByCreatedAtDesc(
         Long customerId

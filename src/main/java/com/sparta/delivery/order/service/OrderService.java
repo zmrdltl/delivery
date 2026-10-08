@@ -281,18 +281,12 @@ public class OrderService {
             return;
         }
 
-        Payment payment = paymentRepository.findByOrderId(order.getId())
+        Payment payment = paymentRepository
+            .findByOrderIdAndStatus(order.getId(), Payment.Status.PAID)
             .orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.CONFLICT,
                 "결제 기록을 확인할 수 없습니다."
             ));
-
-        if (payment.getStatus() != Payment.Status.PAID) {
-            throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "결제 완료 상태가 아닙니다."
-            );
-        }
 
         payment.markCanceled();
     }

@@ -2,7 +2,6 @@ spring:
   application:
     name: delivery
 
-  # DB 연결 — 3-3의 docker run 값과 똑같이
   datasource:
     url: jdbc:postgresql://localhost:5432/delivery
     username: delivery
